@@ -23,13 +23,22 @@ cleanup(){
     exit $?
 }
 
+system_level_metrics(){
+    RX_rate= `ifstat | grep ens33 |awk '{print $7}'`
+    TX_rate= `ifstat | grep ens33 |awk '{print $9}'`
+    Disk_writes= `iostat | grep sda | awk '{print $4}'`
+    Disk_available= `df -h -m /dev/mapper/centos-root | awk '{print $4}'| tail -1`
+    echo "$total_time,$RX_rate,$TX_rate,$Disk_writes,$Disk_available" >> system_metrics.csv
+}
+
 main(){
+    echo "Time,RX Data Rate,TX Data Rate,Disk Writes,Disk Capacity"  >> system_metrics.csv
     #trap ctrl-c and call cleanup function
     trap cleanup SIGINT
     #get IP address from user
     read -p "Please enter the IP address: " IP
     start_processes "$IP"
-    SECONDS = 0;
+    SECONDS=0;
     while true; do
         sleep 5;
         echo "Skipping 5s"
@@ -37,7 +46,11 @@ main(){
 		if [[ $total_time -ge 900 ]]; then
 			cleanup
 		fi
-		#make and call process metrics
         #make and call system metrics
+        system_level_metrics
+		#make and call process metrics
+        
     done
 }
+
+main
