@@ -9,7 +9,6 @@ start_processes() {
         pids+=("$pid")
         echo "Started $process: $pid"
     done
-
     ifstat -a -d 1
     ifstat_pid=$!
     pids+=("$ifstat_pid")
@@ -23,6 +22,17 @@ cleanup(){
     exit $?
 }
 
+process_level_metrics(){
+    echo -n "$total_time," >> process_metrics.csv
+    for ((i=0; i<6; i++)); do
+        pid=${pids[$i]}
+        if [[ $i -eq 5 ]]; then
+			echo ` ps -aux | grep -E "\s$pid\s" | awk '{print $3,",",$4}'` >> process_metrics.csv
+		fi
+        echo -n ` ps -aux | grep -E "\s$pid\s" | awk '{print $3,",",$4,}'` >> process_metrics.csv 
+    done
+}
+
 system_level_metrics(){
     RX_rate= `ifstat | grep ens33 |awk '{print $7}'`
     TX_rate= `ifstat | grep ens33 |awk '{print $9}'`
@@ -33,6 +43,7 @@ system_level_metrics(){
 
 main(){
     echo "Time,RX Data Rate,TX Data Rate,Disk Writes,Disk Capacity"  >> system_metrics.csv
+    echo "Time,APM 1 CPU,APM 1 Memory,APM 2 CPU,APM 2 Memory,APM 3 CPU,APM 3 Memory,APM 4 CPU,APM 4 Memory,APM 5 CPU,APM 5 Memory,APM 6 CPU,APM 6 Memory" >> process_metrics.csv
     #trap ctrl-c and call cleanup function
     trap cleanup SIGINT
     #get IP address from user
@@ -46,10 +57,10 @@ main(){
 		if [[ $total_time -ge 900 ]]; then
 			cleanup
 		fi
+        #make and call process metrics
+        process_level_metrics
         #make and call system metrics
         system_level_metrics
-		#make and call process metrics
-        
     done
 }
 
