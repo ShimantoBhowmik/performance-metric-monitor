@@ -22,16 +22,19 @@ cleanup(){
     exit $?
 }
 
-process_level_metrics(){
+process_level_metrics() {
     echo -n "$total_time," >> process_metrics.csv
     for ((i=0; i<6; i++)); do
         pid=${pids[$i]}
+        # exlude ifstat_pid
         if [[ $i -eq 5 ]]; then
-			echo ` ps -aux | grep -E "\s$pid\s" | awk '{print $3,",",$4}'` >> process_metrics.csv
-		fi
-        echo -n ` ps -aux | grep -E "\s$pid\s" | awk '{print $3,",",$4,}'` >> process_metrics.csv 
+            ps -aux | grep -E "\s$pid\s" | awk '{print $3, ",", $4}' >> process_metrics.csv
+        else
+            echo -n "$(ps -aux | grep -E "\s$pid\s" | awk '{print $3, ",", $4, ","}')" >> process_metrics.csv
+        fi
     done
 }
+
 
 system_level_metrics(){
     RX_rate= `ifstat | grep ens33 |awk '{print $7}'`
