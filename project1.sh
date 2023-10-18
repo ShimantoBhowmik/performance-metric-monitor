@@ -10,8 +10,6 @@ start_processes() {
         echo "Started $process: $pid"
     done
     ifstat -a -d 1
-    ifstat_pid=$!
-    pids+=("$ifstat_pid")
 }
 
 cleanup(){
@@ -19,6 +17,7 @@ cleanup(){
         kill -9 "$pid"
         echo "Killed process: $pid"
     done
+    kill -9 $(ps aux | grep ifstat | awk '{print $2}')
     exit $?
 }
 
@@ -37,11 +36,14 @@ process_level_metrics() {
 
 
 system_level_metrics(){
-    RX_rate= `ifstat | grep ens33 |awk '{print $7}'`
-    TX_rate= `ifstat | grep ens33 |awk '{print $9}'`
-    Disk_writes= `iostat | grep sda | awk '{print $4}'`
-    Disk_available= `df -h -m /dev/mapper/centos-root | awk '{print $4}'| tail -1`
-    echo "$total_time,$RX_rate,$TX_rate,$Disk_writes,$Disk_available" >> system_metrics.csv
+    echo -n "$total_time, " >> system_metrics.csv
+    echo -n $(ifstat | grep ens33 |awk '{print $7}') >> system_metrics.csv
+    echo -n "," >> system_metrics.csv
+    echo -n $(ifstat | grep ens33 |awk '{print $9}') >> system_metrics.csv
+    echo -n "," >> system_metrics.csv
+    echo -n $(iostat | grep sda | awk '{print $4}') >> system_metrics.csv
+    echo -n "," >> system_metrics.csv
+    echo $(df -h -m /dev/mapper/centos-root | awk '{print $4}'| tail -1) >> system_metrics.csv
 }
 
 main(){
@@ -57,7 +59,7 @@ main(){
         sleep 5;
         echo "Skipping 5s"
 		total_time=$SECONDS
-		if [[ $total_time -ge 900 ]]; then
+		if [[ $total_time -ge 905 ]]; then
 			cleanup
 		fi
         #make and call process metrics
